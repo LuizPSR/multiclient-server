@@ -51,7 +51,15 @@ BlogOperation* message;
 
 void init_struct() {}
 
-int get_topic_index(char topic[TOPIC_SIZE]) {}
+int get_topic_index(char topic[TOPIC_SIZE]) {
+  for (int i = 0; i < total_topics; i++) {
+    if (stringcmp(topics[i], topic) == 0) {
+      return i;
+    }
+  }
+
+  return -1;
+}
 
 void* handle_client() {}
 
