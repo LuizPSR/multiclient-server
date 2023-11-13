@@ -10,7 +10,6 @@
 // *********************** Data Structures ***********************
 // ***************************************************************
 
-#define MAX_TOPICS_SUB 10
 #define TOPIC_SIZE 50
 #define CONTENT_SIZE 2048
 
@@ -36,8 +35,6 @@ typedef struct {
 int myID; 
 int is_connected = 0;
 BlogOperation* message;
-
-char my_topics[MAX_TOPICS_SUB][TOPIC_SIZE];
 
 // ***************************************************************
 // *********************** Implementations ***********************
@@ -96,11 +93,11 @@ int createAndConnectSockToServerIPV4orIPV6(char* ip, int port){
     return sock;
 }
 
-void handleClientInput() {
+void handle_input() {
   
 }
 
-void handleServerResponse(){
+void* handle_responses() {
 
 }
 
@@ -142,9 +139,9 @@ int main(int argc, char *argv[]){
         token = strtok(NULL, ", ");
     }
 
-    while(is_connected){
-        
-    }
+    while(is_connected)   {
+        handle_input();        
+    }  
 
     close(sock);
 

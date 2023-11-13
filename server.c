@@ -11,9 +11,9 @@
 // *********************** Data Structures ***********************
 // ***************************************************************
 
-#define MAX_CLIENTS 50
-
+#define MAX_CLIENTS 10
 #define MAX_TOPICS 50
+
 #define TOPIC_SIZE 50
 #define CONTENT_SIZE 2048
 
@@ -48,4 +48,12 @@ BlogOperation* message;
 // ***************************************************************
 // *********************** Implementations ***********************
 // ***************************************************************
+
+void init_struct() {}
+
+int get_topic_index(char topic[TOPIC_SIZE]) {}
+
+void* handle_client() {}
+
+void listen_for_clients() {}
 
