@@ -20,7 +20,7 @@
 #define NEW_INSC 4
 #define END_CONN 5
 #define END_INSC 6
-#define ERR_MSGS 7
+// #define ERR_MSGS 7
 
 typedef struct {
   int client_id;
@@ -42,59 +42,6 @@ BlogOperation* response; // from server
 // *********************** Implementations ***********************
 // ***************************************************************
 
-int createAndConnectSockToServerIPV4orIPV6(char* ip, int port){
-  int sock;
-  struct sockaddr_in servAddrV4;
-  struct sockaddr_in6 servAddrV6;
-
-  //IPv4
-  if (inet_pton(AF_INET, ip, &servAddrV4.sin_addr) == 1) {
-
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-      perror("Failure to create socket");
-      return -1;
-    }
-      
-    memset(&servAddrV4, '0', sizeof(servAddrV4));
-    servAddrV4.sin_family = AF_INET;
-    servAddrV4.sin_port = htons(port);
-
-    if (inet_pton(AF_INET, ip, &servAddrV4.sin_addr) <= 0) {
-      perror("IPv4 address is not supported by server");
-      return -1;
-    }
-
-    if (connect(sock, (struct sockaddr *)&servAddrV4, sizeof(servAddrV4)) < 0) {
-      perror("Failure to connect to server");
-      return -1;
-    }
-
-  //IPv6
-  } else if (inet_pton(AF_INET6, ip, &servAddrV6.sin6_addr) == 1){
-
-    if ((sock = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
-      perror("Failure to create socket");
-      return -1;
-    }
-      
-    memset(&servAddrV6, '0', sizeof(servAddrV6));
-    servAddrV6.sin6_family = AF_INET6;
-    servAddrV6.sin6_port = htons(port);
-
-    if (inet_pton(AF_INET6, ip, &servAddrV6.sin6_addr) <= 0) {
-      perror("IPv4 address is not supported by server");
-      return -1;
-    }
-
-    if (connect(sock, (struct sockaddr *)&servAddrV6, sizeof(servAddrV6)) < 0) {
-      perror("Failure to connect to server");
-      return -1;
-    }
-  }
-
-  return sock;
-}
-
 void* handle_responses() {
   
 }
@@ -103,38 +50,85 @@ void handle_input() {
 
 }
 
-int main(int argc, char** argv) {
-    
-  char *ip = argv[1];
-  int port = atoi(argv[2]);
-  int sock;
+// ***************************************************************
+// **************************** IPv4 *****************************
+// ***************************************************************
 
-  // Create and connect sock to server
-  sock = createAndConnectSockToServerIPV4orIPV6(ip, port);
+int create_and_connect_v4(char* ip, int port) {
+  int client;
+  struct sockaddr_in server_addr;
 
-  // Stablish connection
-  char buffer[sizeof(BlogOperation)];
-  message = malloc(sizeof(BlogOperation));
-  ssize_t bytes_received = recv(client_socket, &server_response, sizeof(server_response), 0);
-  memcpy(&response, bufferResponse, sizeof(Payload));
-  printf("%s\n", response.message);
+  inet_pton(AF_INET, ip, &server_addr.sin_addr);
 
-  // Get own id from server confirmation
-  myID = response.client_id;
-  if (response.operation_type== ERROR) {
-    close(sock);
-    return EXIT_FAILURE;
+  if ((client = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    perror("error: failure to create socket");
+    exit(EXIT_FAILURE);
+  }
+  
+  memset(&server_addr, '0', sizeof(server_addr));
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(port);
+
+  if (inet_pton(AF_INET, ip, &server_addr.sin_addr) <= 0) {
+    perror("error: invalid address");
+    exit(EXIT_FAILURE);
   }
 
-  //Receive all users list
-  recv(sock, bufferResponse, sizeof(Payload), 0);
-  memcpy(&response, bufferResponse, sizeof(Payload));
+  if (connect(client, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    perror("error: failure to connect to server");
+    exit(EXIT_FAILURE);
+  }
 
-  //Get the list of users and store in the database
+  return client;
+}
 
-  while(is_connected)   {
-    handle_input();        
-  }  
+// ***************************************************************
+// **************************** IPv6 *****************************
+// ***************************************************************
+
+int create_and_connect_v6(char* ip, int port) {
+  int client;
+  struct sockaddr_in6 server_addr;
+
+  inet_pton(AF_INET6, ip, &server_addr.sin6_addr);
+
+  if ((client = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
+    perror("error: failure to create socket");
+    exit(EXIT_FAILURE);
+  }
+  
+  memset(&server_addr, '0', sizeof(server_addr));
+  server_addr.sin6_family = AF_INET6;
+  server_addr.sin6_port = htons(port);
+
+  if (inet_pton(AF_INET6, ip, &server_addr.sin6_addr) <= 0) {
+    perror("error: invalid address");
+    exit(EXIT_FAILURE);
+  }
+
+  if (connect(client, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    perror("error: failure to connect to server");
+    exit(EXIT_FAILURE);
+  }
+
+  return client;
+}
+
+int main(int argc, char** argv) {
+    
+  int client_socket;
+  if (strchr(argv[1], '.') != NULL) {
+    client_socket = create_and_connect_v4(argv[1], atoi(argv[2]));
+    
+  } else if (strchr(argv[1], ':') != NULL) {
+    client_socket = create_and_connect_v6(argv[1], atoi(argv[2]));
+    
+  } else {
+    perror("error: invalid IP address");
+    exit(EXIT_FAILURE);
+  }
+
+  int connected = 1;
 
   close(sock);
   return 0;
