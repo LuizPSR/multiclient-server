@@ -66,7 +66,6 @@ void* handle_server(void* args) {
   }
 }
 
-// TODO
 void handle_input() {
   char line[CONTENT_SIZE];
   char* token;
@@ -100,7 +99,8 @@ void handle_input() {
 
     request.operation_type = NEW_INSC;
     token = strtok(NULL, delim);
-    if (strcmp(token, "in") == 0)
+    if (strcmp(token, "in") == 0 ||
+        strcmp(token, "to") == 0)
       token = strtok(NULL, delim);
 
     if (token == NULL) {
@@ -117,7 +117,9 @@ void handle_input() {
 
     request.operation_type = END_INSC;
     token = strtok(NULL, delim);
-    if (strcmp(token, "in") == 0)
+    if (strcmp(token, "in") == 0 ||
+        strcmp(token, "to") == 0 ||
+        strcmp(token, "from") == 0)
       token = strtok(NULL, delim);
 
     if (token == NULL) {
