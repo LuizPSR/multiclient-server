@@ -35,19 +35,99 @@ typedef struct {
 int myID; 
 int is_connected = 0;
 
-BlogOperation* message;  // to server 
-BlogOperation* response; // from server 
+BlogOperation request;  
+BlogOperation response;
 
 // ***************************************************************
 // *********************** Implementations ***********************
 // ***************************************************************
 
-void* handle_responses() {
-  
+void* handle_server(void* args) {
+  while (is_connected) {
+    ssize_t bytes_received = recv(client_socket, &response, sizeof(response), 0);
+    if (bytes_received <= 0) {
+      perror("error receiving data");
+      return EXIT_FAILURE;
+    }
+
+    switch (response.operation_type) {
+      case NEW_POST:
+        printf("new post added in %s by %d\n", response.topic, response.client_id);
+        puts(response.content);
+        break;
+
+      case TOP_LIST:
+        puts(response.content);
+        break;
+
+      default: // error messages
+        puts(response.content);
+    }
+  }
 }
 
+// TODO
 void handle_input() {
+  char line[CONTENT_SIZE];
+  char* token;
+  char* delim = " \n";
 
+  fgets(line, CONTENT_SIZE, stdin);
+  token = strtok(line, delim);
+
+  if (strcmp(token, "publish") == 0)  {
+    request.operation_type = NEW_POST;
+    
+    token = strtok(NULL, delim);
+    if (strcmp(token, "in") == 0)
+      token = strtok(NULL, delim);
+
+    if (token == NULL) {
+      printf("error: must especify the topic of the post\n");
+      return;
+    }
+
+    strcpy(request.topic, token);
+
+    fgets(line, CONTENT_SIZE, stdin);
+    strcpy(request.content, token);
+
+  } else if (strcmp(token, "list") == 0) {
+
+    request.operation_type = TOP_LIST;
+
+  } else if (strcmp(token, "subscribe") == 0) {
+
+    request.operation_type = NEW_INSC;
+    token = strtok(NULL, delim);
+    if (strcmp(token, "in") == 0)
+      token = strtok(NULL, delim);
+
+    if (token == NULL) {
+      printf("error: must especify the topic to subscribe\n");
+      return;
+    }
+
+  } else if (strcmp(token, "exit") == 0) {
+
+    request.operation_type = END_CONN;
+
+
+  } else if (strcmp(token, "unsubscribe") == 0) {
+
+    request.operation_type = END_INSC;
+    token = strtok(NULL, delim);
+    if (strcmp(token, "in") == 0)
+      token = strtok(NULL, delim);
+
+    if (token == NULL) {
+      printf("error: must especify the topic to unsubscribe\n");
+      return;
+    }
+
+  } else {
+    printf("error: invalid command\n");
+  }
 }
 
 // ***************************************************************
@@ -114,6 +194,10 @@ int create_and_connect_v6(char* ip, int port) {
   return client;
 }
 
+// ***************************************************************
+// **************************** Main *****************************
+// ***************************************************************
+
 int main(int argc, char** argv) {
     
   int client_socket;
@@ -125,10 +209,43 @@ int main(int argc, char** argv) {
     
   } else {
     perror("error: invalid IP address");
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
-  int connected = 1;
+  // starting exchange
+  request.operation_type = NEW_CONN;
+  request.server_response = 0;
+
+  // send connection request
+  send(client_socket, &request, sizeof(request), 0);
+  ssize_t bytes_received = recv(client_socket, &response, sizeof(response), 0);
+  if (bytes_received <= 0) {
+    perror("error receiving data");
+    return EXIT_FAILURE;
+  }
+
+  // check if response is according protocol
+  if (response.operation_type != NEW_CONN || !response.server_response) {
+    perror("error: improper communication");
+    return EXIT_FAILURE;
+  }
+
+  // base configuration
+  myID = response.client_id;
+  request.client_id = myID;
+  int is_connected = 1;
+
+  // create server responses handler thread
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, handle_server, (void *)&index) != 0) {
+    perror("error creating client handling thread");
+    return EXIT_FAILURE;
+  }
+
+  while (is_connected) {
+    handle_input();
+    send(client_socket, &request, sizeof(request), 0);
+  }
 
   close(sock);
   return 0;

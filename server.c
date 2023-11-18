@@ -115,7 +115,7 @@ void broadcast_post(int client) {
   int index = get_topic_index(request[client].topic);
   if (index < 0) {
     response[client].operation_type = ERR_MSGS;
-    strcpy(response[client].content, "error: invalid topic\n");
+    strcpy(response[client].content, "error: invalid topic");
     return;
   }
 
@@ -141,15 +141,15 @@ void broadcast_post(int client) {
 void list_all_topics(int client) {
   // check if there are topics to list
   if (total_topics == 0) {
-    strcpy(response[client].content, "no topics available\n");
+    strcpy(response[client].content, "no topics available");
     return;
   }
   
   // list topics
-  strcpy(response[client].content, "");
-  for (int i=0; i < total_topics; i++) {
-    strcat(response[client].content, topics[i]);
+  strcpy(response[client].content, topics[0]);
+  for (int i=1; i < total_topics; i++) {
     strcat(response[client].content, ";");
+    strcat(response[client].content, topics[i]);
   }
   strcat(response[client].content, "\n");
 }
@@ -165,7 +165,7 @@ void subscribe_to_topic(int client) {
   // if client already subscribed
   if (topics[index][client]) {
     response[client].operation_type = ERR_MSGS;
-    strcpy(response[client].content, "error: already subscribed\n");
+    strcpy(response[client].content, "error: already subscribed");
     return;
   }
 
@@ -188,7 +188,7 @@ void unsubscribe_to_topic(int client) {
   int index = get_topic_index(request[client].topic);
   if (index < 0) {
     response[client].operation_type = ERR_MSGS;
-    strcpy(response[client].content, "error: invalid topic\n");
+    strcpy(response[client].content, "error: invalid topic");
     return;
   }
 
@@ -215,7 +215,7 @@ void* handle_client(void* arg) {
     switch (request.operation_type) {
       case NEW_CONN:
         response[client].operation_type = ERR_MSGS;
-        strcpy(response[client].content, "error: client already connected\n");
+        strcpy(response[client].content, "error: client already connected");
         break;
 
       case NEW_POST:
