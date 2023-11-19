@@ -47,9 +47,10 @@ void* handle_server(void* args) {
   int sock = *(int*) args;
   
   while (is_connected) {
+
     ssize_t bytes_received = recv(sock, &response, sizeof(response), 0);
     if (bytes_received <= 0) {
-      printf("error receiving data\n");
+      // printf("error receiving data\n");
       continue;
     }
 
@@ -89,7 +90,9 @@ void handle_input() {
   if (strcmp(token, "publish") == 0)  {
     
     token = strtok(NULL, delim);
-    if (strcmp(token, "in") == 0)
+    if (strcmp(token, "in") == 0 ||
+        strcmp(token, "on") == 0 ||
+        strcmp(token, "to") == 0)
       token = strtok(NULL, delim);
 
     if (token == NULL) {
@@ -104,9 +107,8 @@ void handle_input() {
     strcpy(request.topic, token);
 
     fgets(line, CONTENT_SIZE, stdin);
-    strcpy(request.content, line);
-
-    printf("Publishing post\n");
+    token = strtok(line, "\n"); // remove the \n
+    strcpy(request.content, token);
 
   } else if (strcmp(token, "list") == 0) {
 
@@ -116,13 +118,12 @@ void handle_input() {
     strcpy(request.topic, "");
     strcpy(request.content, "");
 
-    printf("Requesting topics list\n");
-
   } else if (strcmp(token, "subscribe") == 0) {
 
     token = strtok(NULL, delim);
     if (strcmp(token, "in") == 0 ||
-        strcmp(token, "to") == 0)
+        strcmp(token, "to") == 0 ||
+        strcmp(token, "on") == 0)
       token = strtok(NULL, delim);
 
     if (token == NULL) {
@@ -137,8 +138,6 @@ void handle_input() {
     strcpy(request.topic, token);
     strcpy(request.content, "");
 
-    printf("Subscribing\n");
-
   } else if (strcmp(token, "exit") == 0) {
 
     request.client_id = myID;
@@ -148,13 +147,12 @@ void handle_input() {
     strcpy(request.content, "");
 
     is_connected = 0;
-    printf("Exiting\n");
-
 
   } else if (strcmp(token, "unsubscribe") == 0) {
 
     token = strtok(NULL, delim);
     if (strcmp(token, "in") == 0 ||
+        strcmp(token, "on") == 0 ||
         strcmp(token, "to") == 0 ||
         strcmp(token, "from") == 0)
       token = strtok(NULL, delim);
@@ -170,9 +168,6 @@ void handle_input() {
     request.server_response = 0;
     strcpy(request.topic, token);
     strcpy(request.content, "");
-
-    printf("Unsubscribing\n");
-
 
   } else {
     printf("error: invalid command\n");
@@ -283,18 +278,17 @@ int main(int argc, char** argv) {
   // base configuration
   myID = response.client_id;
   request.client_id = myID;
-  int is_connected = 1;
+  is_connected = 1;
 
   // create server responses handler thread
   pthread_t thread;
-  if (pthread_create(&thread, NULL, handle_server, (void *)&index) != 0) {
+  if (pthread_create(&thread, NULL, handle_server, (void *)&sock) != 0) {
     perror("error creating client handling thread");
     return EXIT_FAILURE;
   }
-  printf("Connected\n");
+
   while (is_connected) {
     handle_input();
-    printf("Input handled\n");
     if (send_request) 
       send(sock, &request, sizeof(request), 0);
   }

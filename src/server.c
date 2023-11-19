@@ -11,7 +11,7 @@
 // *********************** Data Structures ***********************
 // ***************************************************************
 
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 20
 #define FREE_CLIENT 0
 
 #define MAX_TOPICS 50
@@ -57,10 +57,18 @@ void init_struct() {
   }
 
   for (int i=0; i < MAX_TOPICS; i++) {
+    strcpy(topics[i], "");
     for (int j=0; j < MAX_CLIENTS; j++) {
       clients_in_topic[i][j] = 0;
     } 
   }
+}
+
+int get_id_from_index(int client_index) {
+  return client_index + 1;
+}
+int get_index_from_id(int client_id) {
+  return client_id - 1;
 }
 
 int get_topic_index(char topic[TOPIC_SIZE]) {
@@ -70,11 +78,10 @@ int get_topic_index(char topic[TOPIC_SIZE]) {
       return i;
     }
   }
-
   return -1;
 }
 
-void create_topic(char topic[TOPIC_SIZE]) {
+int create_topic(char topic[TOPIC_SIZE]) {
   // check if we can store one more topic
   if (total_topics >= MAX_TOPICS) {
     perror("maximum number of topics exceeded");
@@ -84,6 +91,8 @@ void create_topic(char topic[TOPIC_SIZE]) {
   // open new topic
   strcpy(topics[total_topics], topic);
   total_topics++;
+
+  return total_topics - 1;
 }
 
 int generate_client_id(int cli_sock) {
@@ -117,23 +126,19 @@ void broadcast_post(int client) {
     return;
   }
 
+  strcpy(response[client].topic, request[client].topic);
+  strcpy(response[client].content, request[client].content);
+
   // send post to each subscriber
   for (int i=0; i < total_clients; i++) {
     // skip clients not subscribed
     if (clients_in_topic[index][i] == 0)
       continue;
-    
-    response[i].client_id = client;
-    response[i].operation_type = NEW_POST;
-    response[i].server_response = 1;
 
-    strcpy(response[i].topic, request[client].topic);
-    strcpy(response[i].content, request[client].content);
-
-    send(client_sock[i], &response[i], sizeof(response[i]), 0);
+    send(client_sock[i], &response[client], sizeof(response[client]), 0);
   }
 
-  printf("new post added in %s by %d", request[client].topic, client);
+  printf("new post added in %s by %d\n", request[client].topic, get_id_from_index(client));
 }
 
 void list_all_topics(int client) {
@@ -149,29 +154,24 @@ void list_all_topics(int client) {
     strcat(response[client].content, ";");
     strcat(response[client].content, topics[i]);
   }
-  strcat(response[client].content, "\n");
-  printf("Topics list request\n");
-
 }
 
 void subscribe_to_topic(int client) {
   // find or generate topic
   int index = get_topic_index(request[client].topic);
   if (index < 0) {
-    create_topic(request[client].topic);
-    return;
+    index = create_topic(request[client].topic);
   }
 
   // if client already subscribed
-  if (topics[index][client]) {
+  if (clients_in_topic[index][client]) {
     response[client].operation_type = ERR_MSGS;
     strcpy(response[client].content, "error: already subscribed");
     return;
   }
-
   // subscribe
   clients_in_topic[index][client] = 1;
-  printf("client %d subscribed to %s", client, request[client].topic);
+  printf("client %d subscribed to %s\n", get_id_from_index(client), request[client].topic);
 }
 
 void free_client(int client) {
@@ -180,7 +180,7 @@ void free_client(int client) {
   }
   client_sock[client] = FREE_CLIENT;
   total_clients--;
-  printf("client %d was disconnected", client);
+  printf("client %d was disconnected\n", get_id_from_index(client));
 }
 
 void unsubscribe_to_topic(int client) {
@@ -192,9 +192,9 @@ void unsubscribe_to_topic(int client) {
     return;
   }
 
-  // unsub
-  topics[index][client] = 0;
-  printf("client %d unsubscribed to %s", client, request[client].topic);
+  // unsubscribe
+  clients_in_topic[index][client] = 0;
+  printf("client %d unsubscribed to %s\n", get_id_from_index(client), request[client].topic);
 }
 
 void* handle_client(void* args) {
@@ -202,14 +202,21 @@ void* handle_client(void* args) {
   int is_connected = 1;
   int answer_request;
   while (is_connected) {
-    
+
     // wait for request
     ssize_t bytes_received = recv(client_sock[client], &request[client], sizeof(request[client]), 0);
     if (bytes_received <= 0) {
       perror("error receiving data");
       break;
     }
-    
+
+    // clear response to server
+    response[client].client_id = get_id_from_index(client);
+    response[client].operation_type = request[client].operation_type;
+    response[client].server_response = 1;
+    strcpy(response[client].topic, "");
+    strcpy(response[client].content, "");
+
     answer_request = 0;
     // handle request
     switch (request[client].operation_type) {
@@ -246,7 +253,6 @@ void* handle_client(void* args) {
     
     // answer request, if necessary
     if (answer_request) 
-      response[client].server_response = 1;
       send(client_sock[client], &response[client], sizeof(response[client]), 0);
   }
 }
@@ -274,11 +280,6 @@ int create_server_v4(int port){
     exit(EXIT_FAILURE);
   }
 
-  if (listen(server, 1) < 0) {
-    perror("error: failure to listen to client");
-    exit(EXIT_FAILURE);
-  }
-
   return server;
 }
 
@@ -293,7 +294,13 @@ void listen_clients_v4(int server){
     if (total_clients >= MAX_CLIENTS)
       continue;
 
-    // accept and receive first message from client
+    // listen for clients
+    if (listen(server, 1) < 0) {
+      perror("error: failure to listen to client");
+      exit(EXIT_FAILURE);
+    }
+    
+    // accept client
     if ((client = accept(server, (struct sockaddr *) &client_addr, &client_len)) < 0) {
       perror("error: failure to accept client");
       exit(EXIT_FAILURE);
@@ -369,8 +376,14 @@ void listen_clients_v6(int server){
     // cannot accept clients beyond the limit, but check if it is still full
     if (total_clients >= MAX_CLIENTS)
       continue;
+    
+    // listen for clients
+    if (listen(server, 1) < 0) {
+      perror("error: failure to listen to client");
+      exit(EXIT_FAILURE);
+    }
 
-    // accept and receive first message from client
+    // accept client
     if ((client = accept(server, (struct sockaddr *) &client_addr, &client_len)) < 0) {
       perror("error: failure to accept client");
       exit(EXIT_FAILURE);
@@ -398,12 +411,12 @@ void listen_clients_v6(int server){
     }
 
     // send confirmation
-    response[index].client_id = index;
+    response[index].client_id = get_id_from_index(index);
     response[index].operation_type = NEW_CONN;
     response[index].server_response = 1;
 
     send(client_sock[index], &response[index], sizeof(response[index]), 0);
-    printf("Successful creation of connection\n");
+    printf("client %d connected\n", index + 1);
   }
 }
 
