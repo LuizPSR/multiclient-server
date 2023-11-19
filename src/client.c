@@ -101,7 +101,7 @@ void handle_input() {
     request.client_id = myID;
     request.operation_type = NEW_POST;
     request.server_response = 0;
-    strcpy(operation.topic, token);
+    strcpy(request.topic, token);
 
     fgets(line, CONTENT_SIZE, stdin);
     strcpy(request.content, line);
@@ -113,8 +113,8 @@ void handle_input() {
     request.client_id = myID;
     request.operation_type = TOP_LIST;
     request.server_response = 0;
-    strcpy(operation.topic, "");
-    strcpy(operation.content, "");
+    strcpy(request.topic, "");
+    strcpy(request.content, "");
 
     printf("Requesting topics list\n");
 
@@ -134,8 +134,8 @@ void handle_input() {
     request.client_id = myID;
     request.operation_type = NEW_INSC;
     request.server_response = 0;
-    strcpy(operation.topic, token);
-    strcpy(operation.content, "");
+    strcpy(request.topic, token);
+    strcpy(request.content, "");
 
     printf("Subscribing\n");
 
@@ -144,8 +144,8 @@ void handle_input() {
     request.client_id = myID;
     request.operation_type = END_CONN;
     request.server_response = 0;
-    strcpy(operation.topic, "");
-    strcpy(operation.content, "");
+    strcpy(request.topic, "");
+    strcpy(request.content, "");
 
     is_connected = 0;
     printf("Exiting\n");
@@ -168,8 +168,8 @@ void handle_input() {
     request.client_id = myID;
     request.operation_type = END_INSC;
     request.server_response = 0;
-    strcpy(operation.topic, token);
-    strcpy(operation.content, "");
+    strcpy(request.topic, token);
+    strcpy(request.content, "");
 
     printf("Unsubscribing\n");
 
