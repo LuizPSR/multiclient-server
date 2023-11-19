@@ -122,7 +122,7 @@ void broadcast_post(int client) {
   int index = get_topic_index(request[client].topic);
   if (index < 0) {
     response[client].operation_type = ERR_MSGS;
-    strcpy(response[client].content, "error: invalid topic");
+    strcpy(response[client].content, "topic doesn't exits");
     return;
   }
 
@@ -328,11 +328,14 @@ void listen_clients_v4(int server){
     }
 
     // send confirmation
-    response[index].client_id = index;
+    response[index].client_id = get_id_from_index(index);
     response[index].operation_type = NEW_CONN;
     response[index].server_response = 1;
+    strcpy(response[index].topic, "");
+    strcpy(response[index].content, "");
 
     send(client_sock[index], &response[index], sizeof(response[index]), 0);
+    printf("client %d connected\n", response[index].client_id);
   }
 }
 
