@@ -5,4 +5,14 @@ The server represent a blog where the clients may read and write topics. These t
 
 There is no login or identification of the client, and clients and no information from the client is kept after the disconnection.
 
+## Commands
+- **publish [in/on/to] *topic***: publish a post on a existent topic.
+- **list**: list all available topics.
+- **subscribe [to/in/on] *topic***: subscribe in a topic. If topic not does not exist, create it.
+- **exit**: end connection to server.
+- **unsubscribe [to/in/to/from] *topic***: unsubscribe to a topic.
 
+## Usage
+./bin/server [v4/v6] *port*
+
+./bin/client *IP adress* *port*
